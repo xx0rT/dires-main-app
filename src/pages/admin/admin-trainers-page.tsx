@@ -97,7 +97,7 @@ export default function AdminTrainersPage() {
   const saveTrainerSettings = async () => {
     if (!selectedUser) return
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .update({
         is_trainer: formData.is_trainer,
@@ -106,13 +106,22 @@ export default function AdminTrainersPage() {
         updated_at: new Date().toISOString(),
       })
       .eq('id', selectedUser.id)
+      .select()
 
     if (error) {
-      toast.error('Chyba pri ukladani')
+      console.error('Error updating trainer:', error)
+      toast.error(`Chyba pri ukladani: ${error.message}`)
       return
     }
 
-    toast.success('Trenér úspěšně upraven')
+    if (!data || data.length === 0) {
+      console.error('No data returned from update')
+      toast.error('Chyba: Uživatel nebyl nalezen')
+      return
+    }
+
+    console.log('Trainer updated successfully:', data)
+    toast.success(formData.is_trainer ? 'Trenér úspěšně přidán' : 'Trenér úspěšně upraven')
     await fetchProfiles()
     closeDialog()
   }
