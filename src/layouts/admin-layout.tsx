@@ -10,6 +10,7 @@ import {
   Settings,
   Shield,
   Users,
+  UserCheck,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useAdmin } from '@/lib/use-admin'
@@ -24,6 +25,7 @@ const adminSections = [
     items: [
       { id: "overview", label: "Prehled", icon: BarChart3, path: "/admin" },
       { id: "users", label: "Uzivatele", icon: Users, path: "/admin/users" },
+      { id: "trainers", label: "Treneri", icon: UserCheck, path: "/admin/trainers" },
       { id: "blogs", label: "Blog", icon: FileText, path: "/admin/blogs" },
       { id: "courses", label: "Kurzy", icon: BookOpen, path: "/admin/courses" },
       { id: "subscriptions", label: "Predplatne", icon: CreditCard, path: "/admin/subscriptions" },
@@ -37,6 +39,7 @@ const adminNavigationConfig: NavigationConfig = {
   railIcons: [
     { moduleId: "overview", label: "Prehled", icon: BarChart3, defaultPath: "/admin" },
     { moduleId: "users", label: "Uzivatele", icon: Users, defaultPath: "/admin/users" },
+    { moduleId: "trainers", label: "Treneri", icon: UserCheck, defaultPath: "/admin/trainers" },
     { moduleId: "blogs", label: "Blog", icon: FileText, defaultPath: "/admin/blogs" },
     { moduleId: "courses", label: "Kurzy", icon: BookOpen, defaultPath: "/admin/courses" },
     { moduleId: "subscriptions", label: "Predplatne", icon: CreditCard, defaultPath: "/admin/subscriptions" },
@@ -45,6 +48,7 @@ const adminNavigationConfig: NavigationConfig = {
   modules: [
     { id: "overview", label: "Prehled", icon: BarChart3, defaultPath: "/admin", sections: adminSections },
     { id: "users", label: "Uzivatele", icon: Users, defaultPath: "/admin/users", sections: adminSections },
+    { id: "trainers", label: "Treneri", icon: UserCheck, defaultPath: "/admin/trainers", sections: adminSections },
     { id: "blogs", label: "Blog", icon: FileText, defaultPath: "/admin/blogs", sections: adminSections },
     { id: "courses", label: "Kurzy", icon: BookOpen, defaultPath: "/admin/courses", sections: adminSections },
     { id: "subscriptions", label: "Predplatne", icon: CreditCard, defaultPath: "/admin/subscriptions", sections: adminSections },
@@ -58,6 +62,7 @@ const adminNavigationConfig: NavigationConfig = {
 
 function resolveAdminModuleId(pathname: string): string {
   if (pathname.startsWith("/admin/users")) return "users"
+  if (pathname.startsWith("/admin/trainers")) return "trainers"
   if (pathname.startsWith("/admin/blogs")) return "blogs"
   if (pathname.startsWith("/admin/courses")) return "courses"
   if (pathname.startsWith("/admin/subscriptions")) return "subscriptions"

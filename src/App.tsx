@@ -37,6 +37,7 @@ import CoursePartPage from './pages/course-part-page'
 import ScrollToTop from './components/layout/scroll-to-top'
 import AdminOverviewPage from './pages/admin/admin-overview-page'
 import AdminUsersPage from './pages/admin/admin-users-page'
+import AdminTrainersPage from './pages/admin/admin-trainers-page'
 import AdminBlogsPage from './pages/admin/admin-blogs-page'
 import AdminBlogEditorPage from './pages/admin/admin-blog-editor-page'
 import AdminCoursesPage from './pages/admin/admin-courses-page'
@@ -101,6 +102,7 @@ export default function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminOverviewPage />} />
             <Route path="users" element={<AdminUsersPage />} />
+            <Route path="trainers" element={<AdminTrainersPage />} />
             <Route path="blogs" element={<AdminBlogsPage />} />
             <Route path="blogs/:id" element={<AdminBlogEditorPage />} />
             <Route path="courses" element={<AdminCoursesPage />} />
