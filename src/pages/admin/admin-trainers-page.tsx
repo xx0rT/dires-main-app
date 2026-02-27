@@ -73,10 +73,10 @@ export default function AdminTrainersPage() {
     fetchProfiles()
   }, [fetchProfiles])
 
-  const openEditDialog = (profile: Profile) => {
+  const openEditDialog = (profile: Profile, makeTrainer = false) => {
     setSelectedUser(profile)
     setFormData({
-      is_trainer: profile.is_trainer,
+      is_trainer: makeTrainer ? true : profile.is_trainer,
       trainer_role: profile.trainer_role || '',
       trainer_specializations: profile.trainer_specializations || [],
     })
@@ -386,10 +386,7 @@ export default function AdminTrainersPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              openEditDialog(profile)
-                              setFormData((prev) => ({ ...prev, is_trainer: true }))
-                            }}
+                            onClick={() => openEditDialog(profile, true)}
                           >
                             <UserPlus className="mr-1 size-3" />
                             Přidat jako trenéra
@@ -420,7 +417,7 @@ export default function AdminTrainersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserCheck className="size-5" />
-              Upravit trenéra
+              {selectedUser?.is_trainer ? 'Upravit trenéra' : 'Přidat trenéra'}
             </DialogTitle>
           </DialogHeader>
           {selectedUser && (
