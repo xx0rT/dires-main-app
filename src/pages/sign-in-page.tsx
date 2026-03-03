@@ -11,12 +11,13 @@ import { RiArrowRightLine, RiArrowLeftLine, RiEyeLine, RiEyeOffLine } from '@rem
 import { site } from '@/config/site'
 
 export default function SignInPage() {
-  const { user, signIn } = useAuth()
+  const { user, signIn, signInWithGoogle } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   if (user) {
     return <Navigate to="/prehled" replace />
@@ -33,6 +34,16 @@ export default function SignInPage() {
       toast.error(error.message || 'Přihlášení se nezdařilo')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true)
+    try {
+      await signInWithGoogle()
+    } catch (error: any) {
+      toast.error(error.message || 'Přihlášení pomocí Google se nezdařilo')
+      setGoogleLoading(false)
     }
   }
 
@@ -169,7 +180,8 @@ export default function SignInPage() {
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => toast.info('Sociální přihlášení již brzy!')}
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
@@ -189,7 +201,7 @@ export default function SignInPage() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Google
+              {googleLoading ? 'Přesměrování...' : 'Pokračovat s Google'}
             </Button>
 
             <div className="mt-6 space-y-3">
