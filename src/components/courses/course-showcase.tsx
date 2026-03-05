@@ -13,7 +13,7 @@ import {
   ShoppingCart,
   Star,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'
 
@@ -98,10 +98,14 @@ function CourseCardActions({ course }: { course: ShowcaseCourse }) {
 
 function CourseGridCard({ course }: { course: ShowcaseCourse }) {
   const [hovered, setHovered] = useState(false)
+  const navigate = useNavigate()
 
   return (
-    <Link
-      to={course.cta.url}
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => navigate(course.cta.url)}
+      onKeyDown={(e) => { if (e.key === 'Enter') navigate(course.cta.url) }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:border-primary/30 hover:shadow-lg cursor-pointer"
@@ -217,16 +221,20 @@ function CourseGridCard({ course }: { course: ShowcaseCourse }) {
           <CourseCardActions course={course} />
         </div>
       </div>
-    </Link>
+    </div>
   )
 }
 
 function CourseLargeCard({ course }: { course: ShowcaseCourse }) {
   const [hovered, setHovered] = useState(false)
+  const navigate = useNavigate()
 
   return (
-    <Link
-      to={course.cta.url}
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => navigate(course.cta.url)}
+      onKeyDown={(e) => { if (e.key === 'Enter') navigate(course.cta.url) }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:border-primary/30 hover:shadow-xl cursor-pointer"
@@ -342,13 +350,15 @@ function CourseLargeCard({ course }: { course: ShowcaseCourse }) {
           <CourseCardActions course={course} />
         </div>
       </div>
-    </Link>
+    </div>
   )
 }
 
 function CourseListCard({ course }: { course: ShowcaseCourse }) {
+  const navigate = useNavigate()
+
   return (
-    <Link to={course.cta.url} className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:border-primary/30 hover:shadow-md sm:flex-row cursor-pointer">
+    <div role="link" tabIndex={0} onClick={() => navigate(course.cta.url)} onKeyDown={(e) => { if (e.key === 'Enter') navigate(course.cta.url) }} className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:border-primary/30 hover:shadow-md sm:flex-row cursor-pointer">
       <div className="relative w-full shrink-0 overflow-hidden sm:w-56 md:w-64">
         <div className="aspect-[16/10] sm:aspect-auto sm:h-full">
           <img
@@ -420,7 +430,7 @@ function CourseListCard({ course }: { course: ShowcaseCourse }) {
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   )
 }
 

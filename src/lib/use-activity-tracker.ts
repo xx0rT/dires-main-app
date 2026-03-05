@@ -61,7 +61,11 @@ export function useActivityTracker() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        await supabase.from('user_activity').insert(batch)
+        const uid = session.user.id
+        const normalized = batch.map(entry =>
+          entry.user_id === null ? { ...entry, user_id: uid } : entry
+        )
+        await supabase.from('user_activity').insert(normalized)
       }
     } catch {
       queueRef.current.unshift(...batch)
