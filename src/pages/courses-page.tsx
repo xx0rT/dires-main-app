@@ -149,8 +149,9 @@ export default function CoursesPage() {
               const res = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
-                  Authorization: `Bearer ${freshSession.access_token}`,
+                  'Authorization': `Bearer ${freshSession.access_token}`,
                   'Content-Type': 'application/json',
+                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
                 },
                 body: JSON.stringify({ sessionId: stripeSessionId }),
               })

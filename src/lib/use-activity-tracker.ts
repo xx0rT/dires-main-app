@@ -59,7 +59,10 @@ export function useActivityTracker() {
     queueRef.current = []
 
     try {
-      await supabase.from('user_activity').insert(batch)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        await supabase.from('user_activity').insert(batch)
+      }
     } catch {
       queueRef.current.unshift(...batch)
     }
@@ -120,7 +123,7 @@ export function useActivityTracker() {
   useEffect(() => {
     flushTimerRef.current = setInterval(flush, FLUSH_INTERVAL)
 
-    const handleBeforeUnload = () => {
+    const handleBeforeUnload = async () => {
       const duration = Math.round((Date.now() - pageEnteredAt.current) / 1000)
       if (duration >= MIN_DURATION && lastPath.current) {
         queueRef.current.push({
@@ -138,13 +141,25 @@ export function useActivityTracker() {
       }
       trackEvent('session_end')
 
-      if (queueRef.current.length > 0) {
-        const payload = JSON.stringify(queueRef.current)
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_activity`
-        navigator.sendBeacon(
-          url,
-          new Blob([payload], { type: 'application/json' })
-        )
+      if (queueRef.current.length > 0 && user) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session) {
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_activity`, {
+              method: 'POST',
+              keepalive: true,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                'Prefer': 'return=minimal'
+              },
+              body: JSON.stringify(queueRef.current)
+            })
+          }
+        } catch (error) {
+          console.error('Failed to flush activity:', error)
+        }
       }
     }
 
