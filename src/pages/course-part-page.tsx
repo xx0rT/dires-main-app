@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Loader2,
   Clock,
-  PlayCircle,
   ArrowRight,
   ArrowLeft,
   Lock,
@@ -12,9 +11,7 @@ import {
   Home,
   BookOpen,
   Trophy,
-  ChevronRight,
   GraduationCap,
-  Timer,
   Sparkles,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -36,6 +33,7 @@ import {
 import { PhysioChatbot } from "@/components/chatbot/physio-chatbot";
 import { useGamification } from "@/lib/use-gamification";
 import { XpRewardPopup } from "@/components/gamification/xp-reward-popup";
+import { CourseDocsSidebar } from "@/components/courses/course-docs-sidebar";
 
 interface Course {
   id: string;
@@ -55,6 +53,7 @@ interface CourseLesson {
   video_url: string;
   order_index: number;
   duration: number;
+  content?: { blocks?: Array<{ type: string; content: string }> } | null;
 }
 
 interface LessonVideo {
@@ -67,6 +66,14 @@ interface LessonVideo {
   storage_path: string;
   duration_seconds: number;
   order_index: number;
+}
+
+function extractYouTubeId(url: string): string | null {
+  if (!url) return null;
+  const match = url.match(
+    /(?:youtube\.com\/(?:watch\?.*v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+  );
+  return match ? match[1] : null;
 }
 
 export default function CoursePartPage() {
@@ -89,8 +96,6 @@ export default function CoursePartPage() {
   const [videoDuration, setVideoDuration] = useState(0);
   const [actualWatchTime, setActualWatchTime] = useState(0);
   const [lastPosition, setLastPosition] = useState(0);
-
-  const [videoActivated, setVideoActivated] = useState(false);
 
   const videoRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
@@ -118,7 +123,6 @@ export default function CoursePartPage() {
     setVideoDuration(0);
     setActualWatchTime(0);
     setLastPosition(0);
-    setVideoActivated(false);
   }, [courseId, partNumber]);
 
   useEffect(() => {
@@ -252,8 +256,7 @@ export default function CoursePartPage() {
       const videoUrl = currentLesson?.video_url;
       if (!videoUrl || !isMountedRef.current) return;
 
-      const videoIdMatch = videoUrl.match(/embed\/([^?]+)/);
-      const videoId = videoIdMatch ? videoIdMatch[1] : null;
+      const videoId = extractYouTubeId(videoUrl);
 
       if (videoId && (window as any).YT?.Player && videoRef.current && isMountedRef.current) {
         const containerElement = videoRef.current;
@@ -269,7 +272,12 @@ export default function CoursePartPage() {
             videoId,
             width: "100%",
             height: "100%",
-            playerVars: { enablejsapi: 1, origin: window.location.origin },
+            playerVars: {
+              enablejsapi: 1,
+              origin: window.location.origin,
+              rel: 0,
+              modestbranding: 1,
+            },
             events: {
               onReady: () => {
                 if (!isMountedRef.current || !playerRef.current) return;
@@ -389,7 +397,7 @@ export default function CoursePartPage() {
 
       const { data: lessonsData } = await supabase
         .from("course_lessons")
-        .select("id, course_id, title, description, video_url, duration, order_index")
+        .select("id, course_id, title, description, video_url, duration, order_index, content")
         .eq("course_id", courseId!)
         .order("order_index");
 
@@ -400,7 +408,9 @@ export default function CoursePartPage() {
         if (lessonIds.length > 0) {
           const { data: videosData } = await supabase
             .from("course_videos")
-            .select("id, lesson_id, title, video_provider, video_external_id, video_url, storage_path, duration_seconds, order_index")
+            .select(
+              "id, lesson_id, title, video_provider, video_external_id, video_url, storage_path, duration_seconds, order_index"
+            )
             .in("lesson_id", lessonIds)
             .order("order_index");
 
@@ -645,9 +655,7 @@ export default function CoursePartPage() {
                 <Lock className="h-8 w-8 text-muted-foreground" />
               </div>
               <h1 className="text-2xl font-bold tracking-tight">Lekce je zamcena</h1>
-              <p className="text-muted-foreground">
-                Nejdrive dokoncete predchozi lekce.
-              </p>
+              <p className="text-muted-foreground">Nejdrive dokoncete predchozi lekce.</p>
             </>
           )}
           <Button asChild variant="outline" className="mt-2">
@@ -660,17 +668,15 @@ export default function CoursePartPage() {
 
   const isCompleted = completedLessons.has(currentLesson.id);
   const courseProgress = (completedLessons.size / lessons.length) * 100;
-  const totalSeconds =
-    videoDuration > 0 ? videoDuration : currentLesson.duration * 60;
+  const totalSeconds = videoDuration > 0 ? videoDuration : currentLesson.duration * 60;
   const remainingSeconds = Math.max(0, totalSeconds - watchedTime);
   const isLastPart = partIndex === lessons.length - 1;
   const isFirstPart = partIndex === 0;
   const currentLessonVideos = lessonVideos.get(currentLesson.id) ?? [];
-  const storageVideo = currentLessonVideos.find(v => v.video_provider === 'storage' && v.video_url);
+  const storageVideo = currentLessonVideos.find((v) => v.video_provider === "storage" && v.video_url);
   const isStorageVideo = !!storageVideo;
 
-  const nextPartStatus =
-    !isLastPart ? getLessonLockStatus(partIndex + 1) : null;
+  const nextPartStatus = !isLastPart ? getLessonLockStatus(partIndex + 1) : null;
   const canGoNext = nextPartStatus === "available";
 
   return (
@@ -696,7 +702,10 @@ export default function CoursePartPage() {
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>
-                    <Link to={`/kurz/${courseId}`} className="max-w-[120px] sm:max-w-[200px] truncate inline-block">
+                    <Link
+                      to={`/kurz/${courseId}`}
+                      className="max-w-[120px] sm:max-w-[200px] truncate inline-block"
+                    >
                       {course.title}
                     </Link>
                   </BreadcrumbLink>
@@ -710,90 +719,83 @@ export default function CoursePartPage() {
 
             <div className="hidden sm:flex items-center gap-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{completedLessons.size}/{lessons.length}</span>
+                <span>
+                  {completedLessons.size}/{lessons.length}
+                </span>
               </div>
               <Progress value={courseProgress} className="h-1.5 w-20" />
-              <span className="text-xs font-semibold tabular-nums">{Math.round(courseProgress)}%</span>
+              <span className="text-xs font-semibold tabular-nums">
+                {Math.round(courseProgress)}%
+              </span>
             </div>
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px] gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-6 lg:gap-8">
           <div className="space-y-6">
-            <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
-              <div className="bg-black aspect-video relative">
-                {isStorageVideo ? (
-                  <video
-                    className="w-full h-full"
-                    controls
-                    controlsList="nodownload"
-                    onContextMenu={(e) => e.preventDefault()}
-                    src={storageVideo.video_url}
-                    onTimeUpdate={(e) => {
-                      const vid = e.currentTarget;
-                      setWatchedTime(Math.floor(vid.currentTime));
-                      if (vid.duration > 0) {
-                        setVideoProgress((vid.currentTime / vid.duration) * 100);
+            <div className="lg:sticky lg:top-20 lg:z-10">
+              <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
+                <div className="bg-black aspect-video relative">
+                  {isStorageVideo ? (
+                    <video
+                      className="w-full h-full"
+                      controls
+                      controlsList="nodownload"
+                      onContextMenu={(e) => e.preventDefault()}
+                      src={storageVideo.video_url}
+                      onTimeUpdate={(e) => {
+                        const vid = e.currentTarget;
+                        setWatchedTime(Math.floor(vid.currentTime));
+                        if (vid.duration > 0) {
+                          setVideoProgress((vid.currentTime / vid.duration) * 100);
+                          setVideoDuration(Math.floor(vid.duration));
+                        }
+                      }}
+                      onLoadedMetadata={(e) => {
+                        const vid = e.currentTarget;
                         setVideoDuration(Math.floor(vid.duration));
-                      }
-                    }}
-                    onLoadedMetadata={(e) => {
-                      const vid = e.currentTarget;
-                      setVideoDuration(Math.floor(vid.duration));
-                      if (lastPosition > 0 && lastPosition < vid.duration - 10) {
-                        vid.currentTime = lastPosition;
-                      }
-                    }}
-                  />
-                ) : (
-                  <>
+                        if (lastPosition > 0 && lastPosition < vid.duration - 10) {
+                          vid.currentTime = lastPosition;
+                        }
+                      }}
+                    />
+                  ) : (
                     <div
                       ref={videoRef}
                       className="w-full h-full [&>div]:w-full [&>div]:h-full [&_iframe]:w-full [&_iframe]:h-full"
                     />
-                    {!videoActivated && (
-                      <div
-                        className="absolute inset-0 z-10 flex items-center justify-center cursor-pointer"
-                        onClick={() => setVideoActivated(true)}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          setVideoActivated(true);
-                        }}
-                      >
-                        <div className="flex flex-col items-center gap-2 select-none">
-                          <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-                            <PlayCircle className="h-9 w-9 text-white drop-shadow" />
-                          </div>
-                          <span className="text-white/80 text-xs font-medium tracking-wide drop-shadow">Klepnete pro prehrani</span>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-              <div className="px-4 sm:px-5 py-3 bg-muted/30 border-t">
-                <div className="relative h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-primary transition-all duration-300"
-                    style={{ width: `${videoProgress}%` }}
-                  />
+                  )}
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                  <span className="tabular-nums">{formatTime(watchedTime)}</span>
-                  <span className="tabular-nums">-{formatTime(remainingSeconds)}</span>
+                <div className="px-4 sm:px-5 py-3 bg-muted/30 border-t">
+                  <div className="relative h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full bg-primary transition-all duration-300"
+                      style={{ width: `${videoProgress}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                    <span className="tabular-nums">{formatTime(watchedTime)}</span>
+                    <span className="tabular-nums">-{formatTime(remainingSeconds)}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="text-xs font-medium gap-1.5 px-2.5 py-1">
+                <Badge
+                  variant="secondary"
+                  className="text-xs font-medium gap-1.5 px-2.5 py-1"
+                >
                   <GraduationCap className="h-3 w-3" />
                   Cast {partIndex + 1} z {lessons.length}
                 </Badge>
-                <Badge variant="secondary" className="text-xs font-medium gap-1.5 px-2.5 py-1">
+                <Badge
+                  variant="secondary"
+                  className="text-xs font-medium gap-1.5 px-2.5 py-1"
+                >
                   <Clock className="h-3 w-3" />
                   {currentLesson.duration} min
                 </Badge>
@@ -823,10 +825,10 @@ export default function CoursePartPage() {
                     <Trophy className="h-5 w-5 text-primary" />
                   </div>
                   <div className="space-y-2 min-w-0">
-                    <h2 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">O kurzu</h2>
-                    <p className="text-sm leading-relaxed">
-                      {course.description}
-                    </p>
+                    <h2 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
+                      O kurzu
+                    </h2>
+                    <p className="text-sm leading-relaxed">{course.description}</p>
                   </div>
                 </div>
               </div>
@@ -844,7 +846,11 @@ export default function CoursePartPage() {
                       Oznacte lekci jako dokoncene pro odemknuti dalsiho obsahu.
                     </p>
                   </div>
-                  <Button onClick={markModuleComplete} size="lg" className="w-full sm:w-auto flex-shrink-0">
+                  <Button
+                    onClick={markModuleComplete}
+                    size="lg"
+                    className="w-full sm:w-auto flex-shrink-0"
+                  >
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Dokoncit lekci
                   </Button>
@@ -869,7 +875,9 @@ export default function CoursePartPage() {
                   variant={canGoNext ? "default" : "outline"}
                   className={cn("flex-1 sm:flex-none", !canGoNext && "opacity-60")}
                   disabled={!canGoNext}
-                  onClick={() => canGoNext && navigate(`/kurz/${courseId}/cast/${partIndex + 2}`)}
+                  onClick={() =>
+                    canGoNext && navigate(`/kurz/${courseId}/cast/${partIndex + 2}`)
+                  }
                 >
                   {nextPartStatus === "daily_locked" ? (
                     <>
@@ -892,111 +900,17 @@ export default function CoursePartPage() {
             </div>
           </div>
 
-          <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-            <div className="rounded-2xl border bg-card overflow-hidden">
-              <div className="p-4 sm:p-5 border-b bg-muted/30">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <PlayCircle className="h-4 w-4 text-primary" />
-                  </div>
-                  <h3 className="font-semibold">Pokrok</h3>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{completedLessons.size} z {lessons.length} lekci</span>
-                    <span className="font-semibold tabular-nums">{Math.round(courseProgress)}%</span>
-                  </div>
-                  <div className="relative h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="absolute inset-y-0 left-0 rounded-full bg-primary transition-all duration-500 ease-out"
-                      style={{ width: `${courseProgress}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-                  <Timer className="h-3.5 w-3.5" />
-                  <span>Sledovano: {formatTime(actualWatchTime)}</span>
-                </div>
-              </div>
-
-              <div className="p-2">
-                <div className="space-y-0.5">
-                  {lessons.map((lesson, idx) => {
-                    const status = getLessonLockStatus(idx);
-                    const done = completedLessons.has(lesson.id);
-                    const isCurrent = idx === partIndex;
-
-                    return (
-                      <button
-                        key={lesson.id}
-                        type="button"
-                        onClick={() =>
-                          status === "available" &&
-                          navigate(`/kurz/${courseId}/cast/${idx + 1}`)
-                        }
-                        disabled={status !== "available"}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm transition-all duration-200",
-                          isCurrent && "bg-primary/10 ring-1 ring-primary/20",
-                          !isCurrent && status === "available" && "hover:bg-muted/60",
-                          status !== "available" && "opacity-40 cursor-not-allowed"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "w-7 h-7 rounded-lg flex items-center justify-center text-xs font-medium flex-shrink-0 transition-colors",
-                            done
-                              ? "bg-emerald-500 text-white"
-                              : isCurrent
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted text-muted-foreground"
-                          )}
-                        >
-                          {done ? (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                          ) : status === "locked" ? (
-                            <Lock className="h-3 w-3" />
-                          ) : status === "daily_locked" ? (
-                            <CalendarClock className="h-3 w-3" />
-                          ) : (
-                            idx + 1
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className={cn(
-                            "block truncate text-sm",
-                            isCurrent && "font-medium text-primary"
-                          )}>
-                            {lesson.title}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {lesson.duration} min
-                            {(lessonVideos.get(lesson.id)?.length ?? 0) > 0 && (
-                              <span className="ml-1">| {lessonVideos.get(lesson.id)!.length} videi</span>
-                            )}
-                          </span>
-                        </div>
-                        {isCurrent && status === "available" && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 animate-pulse" />
-                        )}
-                        {!isCurrent && status === "available" && (
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 flex-shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate(`/kurz/${courseId}`)}
-            >
-              <BookOpen className="h-4 w-4 mr-2" />
-              Prehled kurzu
-            </Button>
+          <div className="lg:sticky lg:top-20 lg:self-start">
+            <CourseDocsSidebar
+              lessons={lessons}
+              completedLessons={completedLessons}
+              currentPartIndex={partIndex}
+              courseId={courseId!}
+              courseProgress={courseProgress}
+              actualWatchTime={actualWatchTime}
+              getLessonLockStatus={getLessonLockStatus}
+              formatTime={formatTime}
+            />
           </div>
         </div>
       </div>
