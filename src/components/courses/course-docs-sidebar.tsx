@@ -26,7 +26,9 @@ interface CourseDocsSidebarProps {
   currentPartIndex: number;
   courseId: string;
   courseProgress: number;
-  getLessonLockStatus: (index: number) => "available" | "locked" | "daily_locked";
+  getLessonLockStatus: (
+    index: number
+  ) => "available" | "locked" | "daily_locked";
 }
 
 export function CourseDocsSidebar({
@@ -40,7 +42,11 @@ export function CourseDocsSidebar({
   const navigate = useNavigate();
   const activeRef = useRef<HTMLDivElement>(null);
 
-  const weeks: { weekNumber: number; lessons: CourseLesson[]; startIndex: number }[] = [];
+  const weeks: {
+    weekNumber: number;
+    lessons: CourseLesson[];
+    startIndex: number;
+  }[] = [];
   for (let i = 0; i < lessons.length; i += 7) {
     weeks.push({
       weekNumber: Math.floor(i / 7) + 1,
@@ -50,7 +56,9 @@ export function CourseDocsSidebar({
   }
 
   const currentWeekIdx = Math.floor(currentPartIndex / 7);
-  const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([currentWeekIdx]));
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(
+    new Set([currentWeekIdx])
+  );
 
   useEffect(() => {
     setExpandedWeeks((prev) => new Set([...prev, currentWeekIdx]));
@@ -58,8 +66,11 @@ export function CourseDocsSidebar({
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      activeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 150);
+      activeRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 200);
     return () => clearTimeout(timer);
   }, [currentPartIndex]);
 
@@ -76,7 +87,9 @@ export function CourseDocsSidebar({
     <div className="flex flex-col h-full">
       <div className="px-4 py-3 border-b">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-muted-foreground">Pokrok</span>
+          <span className="text-xs font-medium text-muted-foreground">
+            Pokrok
+          </span>
           <span className="text-xs font-semibold tabular-nums">
             {completedLessons.size}/{lessons.length}
           </span>
@@ -92,7 +105,9 @@ export function CourseDocsSidebar({
       <div className="flex-1 overflow-y-auto py-2">
         {weeks.map((week, weekIdx) => {
           const isExpanded = expandedWeeks.has(weekIdx);
-          const weekCompleted = week.lessons.filter((l) => completedLessons.has(l.id)).length;
+          const weekCompleted = week.lessons.filter((l) =>
+            completedLessons.has(l.id)
+          ).length;
           const weekTotal = week.lessons.length;
           const hasActive =
             currentPartIndex >= week.startIndex &&
@@ -112,86 +127,105 @@ export function CourseDocsSidebar({
               >
                 <ChevronRight
                   className={cn(
-                    "h-3 w-3 transition-transform duration-150 flex-shrink-0",
+                    "h-3 w-3 flex-shrink-0 transition-transform duration-300 ease-out",
                     isExpanded && "rotate-90"
                   )}
                 />
-                <span className="flex-1 text-left">Tyden {week.weekNumber}</span>
+                <span className="flex-1 text-left">
+                  Tyden {week.weekNumber}
+                </span>
                 <span className="text-[10px] font-normal tabular-nums opacity-50">
                   {weekCompleted}/{weekTotal}
                 </span>
               </button>
 
-              {isExpanded && (
-                <div className="relative ml-[22px] border-l border-border/60">
-                  {week.lessons.map((lesson, lessonIdx) => {
-                    const globalIdx = week.startIndex + lessonIdx;
-                    const isCurrent = globalIdx === currentPartIndex;
-                    const isDone = completedLessons.has(lesson.id);
-                    const status = getLessonLockStatus(globalIdx);
+              <div
+                className="grid transition-[grid-template-rows] duration-300 ease-out"
+                style={{
+                  gridTemplateRows: isExpanded ? "1fr" : "0fr",
+                }}
+              >
+                <div className="overflow-hidden">
+                  <div className="relative ml-[22px] border-l border-border/60">
+                    {week.lessons.map((lesson) => {
+                      const globalIdx =
+                        week.startIndex +
+                        week.lessons.indexOf(lesson);
+                      const isCurrent =
+                        globalIdx === currentPartIndex;
+                      const isDone = completedLessons.has(lesson.id);
+                      const status = getLessonLockStatus(globalIdx);
 
-                    return (
-                      <div
-                        key={lesson.id}
-                        ref={isCurrent ? activeRef : undefined}
-                        className="relative"
-                      >
-                        {(isDone || isCurrent) && (
-                          <div
-                            className={cn(
-                              "absolute left-[-1px] top-0 w-[2px] h-full",
-                              isDone ? "bg-emerald-500" : "bg-primary"
-                            )}
-                          />
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            status === "available" &&
-                            navigate(`/kurz/${courseId}/cast/${globalIdx + 1}`)
-                          }
-                          disabled={status !== "available"}
-                          className={cn(
-                            "w-full text-left pl-4 pr-3 py-1.5 flex items-center gap-2 transition-colors duration-150 group",
-                            isCurrent && "bg-primary/[0.06]",
-                            !isCurrent && status === "available" && "hover:bg-muted/40",
-                            status !== "available" && "opacity-35 cursor-not-allowed"
-                          )}
+                      return (
+                        <div
+                          key={lesson.id}
+                          ref={isCurrent ? activeRef : undefined}
+                          className="relative"
                         >
-                          <span
+                          {(isDone || isCurrent) && (
+                            <div
+                              className={cn(
+                                "absolute left-[-1px] top-0 w-[2px] h-full",
+                                isDone
+                                  ? "bg-emerald-500"
+                                  : "bg-primary"
+                              )}
+                            />
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              status === "available" &&
+                              navigate(
+                                `/kurz/${courseId}/cast/${globalIdx + 1}`
+                              )
+                            }
+                            disabled={status !== "available"}
                             className={cn(
-                              "flex-1 text-[12px] leading-snug truncate",
-                              isCurrent
-                                ? "font-semibold text-primary"
-                                : isDone
-                                  ? "text-muted-foreground"
-                                  : "text-foreground/80"
+                              "w-full text-left pl-4 pr-3 py-1.5 flex items-center gap-2 transition-colors duration-150 group",
+                              isCurrent && "bg-primary/[0.06]",
+                              !isCurrent &&
+                                status === "available" &&
+                                "hover:bg-muted/40",
+                              status !== "available" &&
+                                "opacity-35 cursor-not-allowed"
                             )}
                           >
-                            {lesson.title}
-                          </span>
-
-                          <span className="flex items-center gap-1.5 flex-shrink-0">
-                            <span className="text-[10px] text-muted-foreground/50 tabular-nums">
-                              {lesson.duration}m
+                            <span
+                              className={cn(
+                                "flex-1 text-[12px] leading-snug truncate",
+                                isCurrent
+                                  ? "font-semibold text-primary"
+                                  : isDone
+                                    ? "text-muted-foreground"
+                                    : "text-foreground/80"
+                              )}
+                            >
+                              {lesson.title}
                             </span>
-                            {isDone && (
-                              <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                            )}
-                            {status === "locked" && (
-                              <Lock className="h-2.5 w-2.5 text-muted-foreground/30" />
-                            )}
-                            {status === "daily_locked" && (
-                              <CalendarClock className="h-2.5 w-2.5 text-amber-500/50" />
-                            )}
-                          </span>
-                        </button>
-                      </div>
-                    );
-                  })}
+
+                            <span className="flex items-center gap-1.5 flex-shrink-0">
+                              <span className="text-[10px] text-muted-foreground/50 tabular-nums">
+                                {lesson.duration}m
+                              </span>
+                              {isDone && (
+                                <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                              )}
+                              {status === "locked" && (
+                                <Lock className="h-2.5 w-2.5 text-muted-foreground/30" />
+                              )}
+                              {status === "daily_locked" && (
+                                <CalendarClock className="h-2.5 w-2.5 text-amber-500/50" />
+                              )}
+                            </span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           );
         })}
