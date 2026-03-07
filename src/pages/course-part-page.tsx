@@ -94,7 +94,7 @@ export default function CoursePartPage() {
   const [videoProgress, setVideoProgress] = useState(0);
   const [watchedTime, setWatchedTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
-  const [actualWatchTime, setActualWatchTime] = useState(0);
+  const [_actualWatchTime, setActualWatchTime] = useState(0);
   const [lastPosition, setLastPosition] = useState(0);
 
   const videoRef = useRef<HTMLDivElement>(null);
@@ -734,8 +734,8 @@ export default function CoursePartPage() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-6 lg:gap-8">
-          <div className="space-y-6">
-            <div className="lg:sticky lg:top-20 lg:z-10">
+          <div className="lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1 space-y-6">
+            <div>
               <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
                 <div className="bg-black aspect-video relative">
                   {isStorageVideo ? (
@@ -784,6 +784,7 @@ export default function CoursePartPage() {
             </div>
 
             <div className="space-y-4">
+
               <div className="flex flex-wrap items-center gap-2">
                 <Badge
                   variant="secondary"
@@ -900,16 +901,14 @@ export default function CoursePartPage() {
             </div>
           </div>
 
-          <div className="lg:sticky lg:top-20 lg:self-start">
+          <div className="lg:sticky lg:top-20 lg:self-start rounded-2xl border bg-card overflow-hidden lg:max-h-[calc(100vh-6rem)]">
             <CourseDocsSidebar
               lessons={lessons}
               completedLessons={completedLessons}
               currentPartIndex={partIndex}
               courseId={courseId!}
               courseProgress={courseProgress}
-              actualWatchTime={actualWatchTime}
               getLessonLockStatus={getLessonLockStatus}
-              formatTime={formatTime}
             />
           </div>
         </div>
