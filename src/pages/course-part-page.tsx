@@ -13,6 +13,9 @@ import {
   Trophy,
   GraduationCap,
   Sparkles,
+  Play,
+  Pause,
+  Maximize2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -114,6 +117,10 @@ export default function CoursePartPage() {
   const lastUpdateTimeRef = useRef(Date.now());
   const completedLessonsRef = useRef<Set<string>>(new Set());
   const iframeIdRef = useRef(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const storageVideoRef = useRef<HTMLVideoElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+  const lastAllowedTimeRef = useRef(0);
 
   useEffect(() => {
     completedLessonsRef.current = completedLessons;
@@ -129,8 +136,10 @@ export default function CoursePartPage() {
     setWatchedTime(0);
     setVideoDuration(0);
     setSignedVideoUrl(null);
+    setIsPlaying(false);
     watchTimeRef.current = 0;
     lastSavedTimeRef.current = 0;
+    lastAllowedTimeRef.current = 0;
   }, [courseId, partNumber]);
 
   useEffect(() => {
@@ -173,6 +182,32 @@ export default function CoursePartPage() {
     },
     []
   );
+
+  const togglePlayPause = useCallback(() => {
+    if (isStorageVideo && storageVideoRef.current) {
+      if (storageVideoRef.current.paused) {
+        storageVideoRef.current.play();
+      } else {
+        storageVideoRef.current.pause();
+      }
+    } else if (playerRef.current?.getPlayerState) {
+      const state = playerRef.current.getPlayerState();
+      if (state === 1) {
+        playerRef.current.pauseVideo();
+      } else {
+        playerRef.current.playVideo();
+      }
+    }
+  }, [isStorageVideo]);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!videoContainerRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      videoContainerRef.current.requestFullscreen();
+    }
+  }, []);
 
   useEffect(() => {
     if (storageVideo?.storage_path) {
@@ -315,9 +350,11 @@ export default function CoursePartPage() {
               } catch (_e) {}
             },
             onStateChange: (event: any) => {
-              if (
-                event.data === (window as any).YT.PlayerState.ENDED
-              ) {
+              const state = event.data;
+              if (state === 1) setIsPlaying(true);
+              else if (state === 2 || state === 0 || state === 5)
+                setIsPlaying(false);
+              if (state === (window as any).YT.PlayerState.ENDED) {
                 saveWatchTime();
               }
             },
@@ -688,7 +725,7 @@ export default function CoursePartPage() {
   const canGoNext = nextPartStatus === "available";
 
   const ytEmbedUrl = currentYtId
-    ? `https://www.youtube-nocookie.com/embed/${currentYtId}?enablejsapi=1&rel=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin)}`
+    ? `https://www.youtube-nocookie.com/embed/${currentYtId}?enablejsapi=1&rel=0&modestbranding=1&controls=0&disablekb=1&iv_load_policy=3&fs=0&origin=${encodeURIComponent(window.location.origin)}`
     : null;
 
   return (
@@ -749,19 +786,33 @@ export default function CoursePartPage() {
           <div className="lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto space-y-6">
             <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
               <div
+                ref={videoContainerRef}
                 className="bg-black aspect-video relative select-none"
                 onContextMenu={(e) => e.preventDefault()}
               >
                 {isStorageVideo && signedVideoUrl ? (
                   <video
+                    ref={storageVideoRef}
                     className="absolute inset-0 w-full h-full"
-                    controls
                     controlsList="nodownload noremoteplayback"
                     disablePictureInPicture
                     onContextMenu={(e) => e.preventDefault()}
                     src={signedVideoUrl}
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onSeeking={(e) => {
+                      const vid = e.currentTarget;
+                      if (
+                        Math.abs(
+                          vid.currentTime - lastAllowedTimeRef.current
+                        ) > 2
+                      ) {
+                        vid.currentTime = lastAllowedTimeRef.current;
+                      }
+                    }}
                     onTimeUpdate={(e) => {
                       const vid = e.currentTarget;
+                      lastAllowedTimeRef.current = vid.currentTime;
                       setWatchedTime(Math.floor(vid.currentTime));
                       if (vid.duration > 0) {
                         setVideoProgress(
@@ -781,9 +832,8 @@ export default function CoursePartPage() {
                     key={currentLesson.id}
                     id={`yt-player-${iframeIdRef.current}`}
                     src={ytEmbedUrl}
-                    className="absolute inset-0 w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    allow="accelerometer; autoplay; encrypted-media; gyroscope"
                     referrerPolicy="strict-origin-when-cross-origin"
                     title={currentLesson.title}
                   />
@@ -792,6 +842,53 @@ export default function CoursePartPage() {
                     <p className="text-sm text-white/50">
                       Video neni k dispozici
                     </p>
+                  </div>
+                )}
+
+                {(ytEmbedUrl || (isStorageVideo && signedVideoUrl)) && (
+                  <div
+                    className="absolute inset-0 z-10 cursor-pointer group"
+                    onClick={togglePlayPause}
+                  >
+                    <div
+                      className={cn(
+                        "absolute inset-0 bg-black/20 transition-opacity duration-300",
+                        isPlaying
+                          ? "opacity-0 group-hover:opacity-100"
+                          : "opacity-100"
+                      )}
+                    />
+                    <div
+                      className={cn(
+                        "absolute inset-0 flex items-center justify-center transition-opacity duration-300",
+                        isPlaying
+                          ? "opacity-0 group-hover:opacity-100"
+                          : "opacity-100"
+                      )}
+                    >
+                      <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg transition-transform duration-200 group-hover:scale-110">
+                        {isPlaying ? (
+                          <Pause className="h-7 w-7 text-black" />
+                        ) : (
+                          <Play className="h-7 w-7 text-black ml-1" />
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={cn(
+                        "absolute bottom-3 right-3 w-9 h-9 rounded-lg bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-all duration-200",
+                        isPlaying
+                          ? "opacity-0 group-hover:opacity-100"
+                          : "opacity-100"
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFullscreen();
+                      }}
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </button>
                   </div>
                 )}
               </div>
